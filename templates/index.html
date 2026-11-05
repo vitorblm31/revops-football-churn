@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RevOps AI | Prevenção de Churn</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: #151b2b;
+            --text-light: #e2e8f0;
+            --neon-blue: #00f0ff;
+            --neon-yellow: #eaff00;
+            --neon-red: #ff2a2a;
+            --border-color: #2d3748;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header h1 { font-size: 2.5rem; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        .header h1 span { color: var(--neon-blue); text-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+
+        .kpi-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .kpi-card h3 { margin: 0; font-size: 0.9rem; color: #a0aec0; text-transform: uppercase; }
+        .kpi-card .value { font-size: 2rem; font-weight: 800; margin-top: 10px; }
+        .kpi-red { color: var(--neon-red); text-shadow: 0 0 8px rgba(255, 42, 42, 0.4); }
+        .kpi-blue { color: var(--neon-blue); }
+
+        .dashboard {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 1000px;
+            overflow: hidden;
+            padding-bottom: 10px;
+        }
+
+        .toolbar {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            width: 300px;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            transition: 0.3s;
+        }
+
+        .search-input:focus { border-color: var(--neon-blue); box-shadow: 0 0 5px rgba(0, 240, 255, 0.3); }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 1rem 1.5rem; }
+        th { color: var(--neon-blue); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
+        td { border-bottom: 1px solid rgba(45, 55, 72, 0.5); transition: 0.3s; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.03); }
+
+        .risco-alto { color: var(--neon-red); font-weight: 800; }
+        .risco-medio { color: var(--neon-yellow); font-weight: 600; }
+
+        .tag-plano { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; }
+        .plano-diamante { background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); }
+        .plano-ouro { background: rgba(234, 255, 0, 0.1); color: #eaff00; border: 1px solid rgba(234, 255, 0, 0.3); }
+        .plano-prata { background: rgba(160, 174, 192, 0.1); color: #e2e8f0; border: 1px solid rgba(160, 174, 192, 0.3); }
+        .plano-bronze { background: rgba(255, 87, 34, 0.1); color: #ff8a65; border: 1px solid rgba(255, 87, 34, 0.3); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>RevOps <span>Football</span></h1>
+        <p>Motor de Inteligência e Prevenção de Churn</p>
+    </div>
+
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <h3>Total Analisado</h3>
+            <div class="value kpi-blue" id="kpi-total">0</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Risco Crítico (>70%)</h3>
+            <div class="value kpi-red" id="kpi-critico">0</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Risco Médio Global</h3>
+            <div class="value" id="kpi-media">0%</div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="toolbar">
+           <input type="text" id="search" class="search-input" placeholder="Buscar ID, Plano ou Motivo..." onkeyup="filtrarTabela()" autocomplete="off">
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID do Sócio</th>
+                    <th>Plano</th>
+                    <th>Risco (MLP Pred)</th>
+                    <th>Fator de Risco (Shapley Value)</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-dados">
+                <!-- Injetado via JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let dadosGlobais = [];
+
+        async function carregarDashboard() {
+            try {
+                const response = await fetch('/api/churn');
+                const json = await response.json();
+                dadosGlobais = json.dados;
+                
+                atualizarKPIs(dadosGlobais);
+                renderizarTabela(dadosGlobais);
+            } catch (error) {
+                console.error("Falha na API:", error);
+            }
+        }
+
+        function atualizarKPIs(dados) {
+            document.getElementById('kpi-total').innerText = dados.length;
+            
+            const criticos = dados.filter(s => s.risco >= 0.70).length;
+            document.getElementById('kpi-critico').innerText = criticos;
+            
+            const somaRiscos = dados.reduce((acc, s) => acc + s.risco, 0);
+            const media = (somaRiscos / dados.length) * 100;
+            document.getElementById('kpi-media').innerText = media.toFixed(1) + '%';
+        }
+
+        function renderizarTabela(dados) {
+            const tbody = document.getElementById('tabela-dados');
+            tbody.innerHTML = '';
+            
+            dados.forEach(socio => {
+                let classeRisco = socio.risco >= 0.70 ? 'risco-alto' : (socio.risco >= 0.40 ? 'risco-medio' : '');
+                let classePlano = 'plano-' + socio.plano.toLowerCase();
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family: monospace; font-size: 1.1rem;">#${socio.id}</td>
+                    <td><span class="tag-plano ${classePlano}">${socio.plano}</span></td>
+                    <td class="${classeRisco}">${(socio.risco * 100).toFixed(1)}%</td>
+                    <td style="color: #a0aec0;">${socio.fator_critico}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filtrarTabela() {
+            const termo = document.getElementById('search').value.toLowerCase();
+            const dadosFiltrados = dadosGlobais.filter(s => 
+                s.id.includes(termo) || 
+                s.plano.toLowerCase().includes(termo) || 
+                s.fator_critico.toLowerCase().includes(termo)
+            );
+            renderizarTabela(dadosFiltrados);
+        }
+
+        window.addEventListener('DOMContentLoaded', carregarDashboard);
+    </script>
+</body>
+</html>
