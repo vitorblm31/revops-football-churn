@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
+import sqlite3
 
 app = FastAPI(title="RevOps AI - Churn Predictor")
 
@@ -12,20 +13,47 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-dados_predicao = [
-    {"id": "7741", "plano": "Diamante", "risco": 0.92, "fator_critico": "Ausência nos últimos 4 jogos"},
-    {"id": "8820", "plano": "Ouro", "risco": 0.65, "fator_critico": "Queda no consumo da loja oficial"},
-    {"id": "9933", "plano": "Prata", "risco": 0.12, "fator_critico": "Alta assiduidade (Sócio Engajado)"},
-    {"id": "1024", "plano": "Bronze", "risco": 0.81, "fator_critico": "Inadimplência recente (15 dias)"},
-    {"id": "2055", "plano": "Ouro", "risco": 0.45, "fator_critico": "Fim de contrato próximo"},
-    {"id": "3190", "plano": "Diamante", "risco": 0.15, "fator_critico": "Upgrade recente de plano"},
-    {"id": "4421", "plano": "Bronze", "risco": 0.88, "fator_critico": "Cartão de crédito recusado"},
-    {"id": "5532", "plano": "Prata", "risco": 0.55, "fator_critico": "Redução na compra de ingressos extras"},
-    {"id": "6698", "plano": "Diamante", "risco": 0.05, "fator_critico": "Presença em 100% dos jogos em casa"},
-    {"id": "7712", "plano": "Bronze", "risco": 0.72, "fator_critico": "Nenhum acesso ao app há 60 dias"},
-    {"id": "8899", "plano": "Ouro", "risco": 0.38, "fator_critico": "Mudança de endereço (outra cidade)"},
-    {"id": "9001", "plano": "Prata", "risco": 0.79, "fator_critico": "Reclamação aberta no SAC pendente"}
-]
+
+NOME_BANCO = "revops.db"
+
+def inicializar_banco():
+    conn = sqlite3.connect(NOME_BANCO)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS socios_churn (
+            id TEXT PRIMARY KEY,
+            plano TEXT,
+            risco REAL,
+            fator_critico TEXT
+        )
+    ''')
+    
+    cursor.execute("SELECT COUNT(*) FROM socios_churn")
+    if cursor.fetchone()[0] == 0:
+        dados_iniciais = [
+            ("7741", "Diamante", 0.92, "Ausência nos últimos 4 jogos"),
+            ("8820", "Ouro", 0.65, "Queda no consumo da loja oficial"),
+            ("9933", "Prata", 0.12, "Alta assiduidade (Sócio Engajado)"),
+            ("1024", "Bronze", 0.81, "Inadimplência recente (15 dias)"),
+            ("2055", "Ouro", 0.45, "Fim de contrato próximo"),
+            ("3190", "Diamante", 0.15, "Upgrade recente de plano"),
+            ("4421", "Bronze", 0.88, "Cartão de crédito recusado"),
+            ("5532", "Prata", 0.55, "Redução na compra de ingressos extras"),
+            ("6698", "Diamante", 0.05, "Presença em 100% dos jogos em casa"),
+            ("7712", "Bronze", 0.72, "Nenhum acesso ao app há 60 dias"),
+            ("8899", "Ouro", 0.38, "Mudança de endereço (outra cidade)"),
+            ("9001", "Prata", 0.79, "Reclamação aberta no SAC pendente")
+        ]
+        cursor.executemany('''
+            INSERT INTO socios_churn (id, plano, risco, fator_critico)
+            VALUES (?, ?, ?, ?)
+        ''', dados_iniciais)
+        conn.commit()
+        
+    conn.close()
+
+inicializar_banco()
 
 @app.get("/")
 async def carregar_dashboard():
@@ -33,7 +61,17 @@ async def carregar_dashboard():
 
 @app.get("/api/churn")
 async def obter_dados_churn():
-    return {"status": "sucesso", "dados": dados_predicao}
+    conn = sqlite3.connect(NOME_BANCO)
+    conn.row_factory = sqlite3.Row 
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM socios_churn")
+    linhas = cursor.fetchall()
+    
+    dados_formatados = [dict(linha) for linha in linhas]
+    
+    conn.close()
+    return {"status": "sucesso", "dados": dados_formatados}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
