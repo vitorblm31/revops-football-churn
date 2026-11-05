@@ -1,6 +1,5 @@
 # RevOps Football: Churn Prediction para Sócio-Torcedor
 
-![Status](https://img.shields.io/badge/Status-Em_Desenvolvimento-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.14-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393)
 ![License](https://img.shields.io/badge/License-MIT-purple)
